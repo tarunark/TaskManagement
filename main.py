@@ -13,10 +13,10 @@ from PyQt5.QtGui import QColor, QDrag, QFont
 
 
 class Task:
-    def __init__(self, task_id, title, parent_id=None, description="", priority="Medium",
+    def __init__(self, id, title, parent_id=None, description="", priority="Medium",
                  tags=None, created_date=None, completed_date=None, state="active",
                  notes="", references=None):
-        self.id = task_id
+        self.id = id
         self.title = title
         self.parent_id = parent_id
         self.description = description
@@ -45,6 +45,8 @@ class Task:
     
     @staticmethod
     def from_dict(data):
+        #print(data)
+        
         return Task(**data)
 
 
@@ -172,7 +174,7 @@ class TaskManager:
 
 
 class SettingsDialog(QDialog):
-    def __init__(self, parent=None, slots_per_day=4, hours_per_slot=2):
+    def __init__(self, parent=None, slots_per_day=7, hours_per_slot=2):
         super().__init__(parent)
         self.setWindowTitle("Week Planning Settings")
         self.slots_per_day = slots_per_day
@@ -259,7 +261,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.task_manager = TaskManager()
         self.current_task = None
-        self.slots_per_day = 4
+        self.slots_per_day = 7
         self.hours_per_slot = 2
         self.current_week_start = self.get_week_start(QDate.currentDate())
         self.init_ui()
@@ -354,7 +356,8 @@ class MainWindow(QMainWindow):
         self.task_tree.setDragEnabled(True)
         self.task_tree.setAcceptDrops(True)
         self.task_tree.setDragDropMode(QTreeWidget.DragDrop)
-        self.task_tree.setDefaultDropAction(Qt.MoveAction)
+        self.task_tree.setDefaultDropAction(Qt.CopyAction)
+        self.task_tree.startDrag = lambda actions: self.start_tree_drag(actions)
         layout.addWidget(self.task_tree)
         
         return panel
@@ -456,10 +459,18 @@ class MainWindow(QMainWindow):
         self.schedule_table.setColumnCount(len(days))
         self.schedule_table.setHorizontalHeaderLabels(days)
         
-        for i in range(self.slots_per_day):
-            start_hour = 9 + i * self.hours_per_slot
-            end_hour = start_hour + self.hours_per_slot
-            self.schedule_table.setVerticalHeaderItem(i, QTableWidgetItem(f"{start_hour}:00-{end_hour}:00"))
+
+        slots = ['9:00', '10:00', '12:00', '12:30', '14:30', '16:00', '18:00', '19:00'];
+        for i in range(0, len(slots)-1):
+            start_hour = str(slots[i]) #9 + i * self.hours_per_slot
+            end_hour = str(slots[i+1])#start_hour + self.hours_per_slot
+            self.schedule_table.setVerticalHeaderItem(i, QTableWidgetItem(start_hour+ '-' + end_hour))
+        
+        #for i in range(self.slots_per_day):
+        #    start_hour = 9 + i * self.hours_per_slot
+        #    end_hour = start_hour + self.hours_per_slot
+        #    self.schedule_table.setVerticalHeaderItem(i, QTableWidgetItem(f"{start_hour}:00-{end_hour}:00"))
+        
         
         self.schedule_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.schedule_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -662,6 +673,23 @@ class MainWindow(QMainWindow):
                 self.task_manager.unschedule_task(date.toString("yyyy-MM-dd"), str(row))
                 self.load_schedule()
     
+    def start_tree_drag(self, supported_actions):
+        """Custom drag handler to prevent item removal from tree"""
+        selected_items = self.task_tree.selectedItems()
+        if not selected_items:
+            return
+        
+        item = selected_items[0]
+        task_id = item.data(0, Qt.UserRole)
+        
+        drag = QDrag(self.task_tree)
+        mime_data = QMimeData()
+        mime_data.setText(str(task_id))
+        drag.setMimeData(mime_data)
+        
+        # Use CopyAction to prevent removal from tree
+        drag.exec_(Qt.CopyAction)
+    
     def schedule_drag_enter(self, event):
         event.accept()
     
@@ -674,15 +702,19 @@ class MainWindow(QMainWindow):
         col = self.schedule_table.columnAt(position.x())
         
         if row >= 0 and col >= 0:
-            # Get task from tree
-            selected_items = self.task_tree.selectedItems()
-            if selected_items:
-                task_id = selected_items[0].data(0, Qt.UserRole)
-                date = self.current_week_start.addDays(col)
-                self.task_manager.schedule_task(task_id, date.toString("yyyy-MM-dd"), str(row))
-                self.load_schedule()
-                event.accept()
-                return
+            # Check if drag is from task tree
+            mime_data = event.mimeData()
+            if mime_data.hasText():
+                try:
+                    task_id = int(mime_data.text())
+                    if task_id in self.task_manager.tasks:
+                        date = self.current_week_start.addDays(col)
+                        self.task_manager.schedule_task(task_id, date.toString("yyyy-MM-dd"), str(row))
+                        self.load_schedule()
+                        event.accept()
+                        return
+                except ValueError:
+                    pass
             
             # Handle drag from within schedule table (moving between slots)
             source = event.source()
