@@ -351,8 +351,10 @@ class MainWindow(QMainWindow):
         self.task_tree.itemClicked.connect(self.on_task_selected)
         self.task_tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.task_tree.customContextMenuRequested.connect(self.show_task_context_menu)
-        self.task_tree.setDragDropMode(QTreeWidget.InternalMove)
-        self.task_tree.itemDropped = self.on_task_tree_drop
+        self.task_tree.setDragEnabled(True)
+        self.task_tree.setAcceptDrops(True)
+        self.task_tree.setDragDropMode(QTreeWidget.DragDrop)
+        self.task_tree.setDefaultDropAction(Qt.MoveAction)
         layout.addWidget(self.task_tree)
         
         return panel
@@ -388,7 +390,10 @@ class MainWindow(QMainWindow):
         self.schedule_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.schedule_table.customContextMenuRequested.connect(self.show_schedule_context_menu)
         self.schedule_table.setAcceptDrops(True)
+        self.schedule_table.setDragEnabled(True)
+        self.schedule_table.setDragDropMode(QTableWidget.DragDrop)
         self.schedule_table.dragEnterEvent = self.schedule_drag_enter
+        self.schedule_table.dragMoveEvent = self.schedule_drag_move
         self.schedule_table.dropEvent = self.schedule_drop
         layout.addWidget(self.schedule_table)
         
@@ -658,10 +663,10 @@ class MainWindow(QMainWindow):
                 self.load_schedule()
     
     def schedule_drag_enter(self, event):
-        if event.mimeData().hasText():
-            event.accept()
-        else:
-            event.ignore()
+        event.accept()
+    
+    def schedule_drag_move(self, event):
+        event.accept()
     
     def schedule_drop(self, event):
         position = event.pos()
@@ -678,6 +683,28 @@ class MainWindow(QMainWindow):
                 self.load_schedule()
                 event.accept()
                 return
+            
+            # Handle drag from within schedule table (moving between slots)
+            source = event.source()
+            if source == self.schedule_table:
+                source_row = self.schedule_table.currentRow()
+                source_col = self.schedule_table.currentColumn()
+                source_item = self.schedule_table.item(source_row, source_col)
+                
+                if source_item:
+                    task_id = source_item.data(Qt.UserRole)
+                    
+                    # Remove from old slot
+                    old_date = self.current_week_start.addDays(source_col)
+                    self.task_manager.unschedule_task(old_date.toString("yyyy-MM-dd"), str(source_row))
+                    
+                    # Add to new slot
+                    new_date = self.current_week_start.addDays(col)
+                    self.task_manager.schedule_task(task_id, new_date.toString("yyyy-MM-dd"), str(row))
+                    
+                    self.load_schedule()
+                    event.accept()
+                    return
         
         event.ignore()
     
@@ -736,4 +763,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()                                 
+    main()
