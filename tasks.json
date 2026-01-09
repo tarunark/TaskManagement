@@ -1,0 +1,45 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "title": "test",
+      "parent_id": null,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-09T15:57:07.610039",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "references": []
+    },
+    {
+      "id": 2,
+      "title": "test2",
+      "parent_id": null,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-09T15:58:58.720629",
+      "completed_date": "2026-01-09T16:02:38.303836",
+      "state": "completed",
+      "notes": "",
+      "references": []
+    },
+    {
+      "id": 3,
+      "title": "task 3",
+      "parent_id": null,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-09T15:59:05.808264",
+      "completed_date": "2026-01-09T16:02:45.537323",
+      "state": "completed",
+      "notes": "",
+      "references": []
+    }
+  ],
+  "schedule": {},
+  "next_id": 4
+}
