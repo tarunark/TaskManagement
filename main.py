@@ -45,8 +45,6 @@ class Task:
     
     @staticmethod
     def from_dict(data):
-        #print(data)
-        
         return Task(**data)
 
 
@@ -459,21 +457,40 @@ class MainWindow(QMainWindow):
         self.schedule_table.setColumnCount(len(days))
         self.schedule_table.setHorizontalHeaderLabels(days)
         
+            
+        # Define colors for different time slots (alternating for visual distinction)
+        slot_colors = [
+            QColor(240, 248, 255),  # Alice Blue
+            QColor(255, 250, 240),  # Floral White
+            QColor(240, 255, 240),  # HoneydewHi
+            QColor(255, 245, 238),  # Seashell
+            QColor(245, 245, 245),  # White Smoke
+            QColor(255, 250, 250),  # Snow
+            QColor(255, 250, 250),  # Snow
+        ]
 
-        slots = ['9:00', '10:00', '12:00', '12:30', '14:30', '16:00', '18:00', '19:00'];
+        slots = [900, 1000, 1200, 1230, 1430,  1600, 1800, 1900];
+        self.schedule_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
         for i in range(0, len(slots)-1):
             start_hour = str(slots[i]) #9 + i * self.hours_per_slot
             end_hour = str(slots[i+1])#start_hour + self.hours_per_slot
-            self.schedule_table.setVerticalHeaderItem(i, QTableWidgetItem(start_hour+ '-' + end_hour))
-        
-        #for i in range(self.slots_per_day):
-        #    start_hour = 9 + i * self.hours_per_slot
-        #    end_hour = start_hour + self.hours_per_slot
-        #    self.schedule_table.setVerticalHeaderItem(i, QTableWidgetItem(f"{start_hour}:00-{end_hour}:00"))
-        
+            self.schedule_table.setVerticalHeaderItem(i, QTableWidgetItem(start_hour+ '-' + end_hour), )
+            
+            # Set different row height based on hours (taller rows for longer slots)
+            row_height = int((60 + slots[i+1] - slots[i])/2)#(self.hours_per_slot * 10)
+
+
+            self.schedule_table.setRowHeight(i, row_height)
+            
+            # Apply background color to each cell in the row
+            color = slot_colors[i % len(slot_colors)]
+            for j in range(len(days)):
+                item = QTableWidgetItem("")
+                item.setBackground(color)
+                self.schedule_table.setItem(i, j, item)
         
         self.schedule_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.schedule_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.schedule_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
     
     def get_week_start(self, date):
         days_to_monday = date.dayOfWeek() - 1
@@ -532,10 +549,30 @@ class MainWindow(QMainWindow):
         item.setExpanded(True)
     
     def load_schedule(self):
-        # Clear existing items
+        # Clear existing items and reset backgrounds
         for row in range(self.schedule_table.rowCount()):
             for col in range(self.schedule_table.columnCount()):
-                self.schedule_table.setItem(row, col, QTableWidgetItem(""))
+                item = self.schedule_table.item(row, col)
+                if item:
+                    item.setText("")
+                    item.setData(Qt.UserRole, None)
+        
+        # Reapply background colors
+        slot_colors = [
+            QColor(240, 248, 255),  # Alice Blue
+            QColor(255, 250, 240),  # Floral White
+            QColor(240, 255, 240),  # Honeydew
+            QColor(255, 245, 238),  # Seashell
+            QColor(245, 245, 245),  # White Smoke
+            QColor(255, 250, 250),  # Snow
+        ]
+        
+        for row in range(self.schedule_table.rowCount()):
+            color = slot_colors[row % len(slot_colors)]
+            for col in range(self.schedule_table.columnCount()):
+                item = self.schedule_table.item(row, col)
+                if item:
+                    item.setBackground(color)
         
         # Load scheduled tasks
         for day_offset in range(5):
@@ -547,9 +584,27 @@ class MainWindow(QMainWindow):
                     slot = int(slot_str)
                     if slot < self.schedule_table.rowCount() and task_id in self.task_manager.tasks:
                         task = self.task_manager.tasks[task_id]
-                        item = QTableWidgetItem(task.title)
-                        item.setData(Qt.UserRole, task_id)
-                        self.schedule_table.setItem(slot, day_offset, item)
+                        item = self.schedule_table.item(slot, day_offset)
+                        if item:
+                            item.setText(task.title)
+                            item.setData(Qt.UserRole, task_id)
+                            
+                            # Highlight scheduled tasks with a different color
+                            item.setBackground(QColor(173, 216, 230))  # Light Blue
+                            
+                            # Set font based on priority
+                            font = item.font()
+                            if task.priority == "Critical":
+                                font.setBold(True)
+                                item.setForeground(QColor(220, 20, 60))  # Crimson
+                            elif task.priority == "High":
+                                font.setBold(True)
+                                item.setForeground(QColor(255, 140, 0))  # Dark Orange
+                            elif task.priority == "Medium":
+                                item.setForeground(QColor(0, 0, 0))  # Black
+                            else:  # Low
+                                item.setForeground(QColor(128, 128, 128))  # Gray
+                            item.setFont(font)
     
     def on_task_selected(self, item, column):
         task_id = item.data(0, Qt.UserRole)
