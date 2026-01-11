@@ -8,8 +8,8 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QSplitter, QDialog, QLineEdit, QSpinBox, QComboBox,
                              QDateEdit, QCheckBox, QMessageBox, QHeaderView, QMenu,
                              QAction, QDialogButtonBox, QFormLayout, QGroupBox)
-from PyQt5.QtCore import Qt, QDate, QMimeData
-from PyQt5.QtGui import QColor, QDrag, QFont
+from PyQt5.QtCore import Qt, QDate, QMimeData, QTimer, QTime
+from PyQt5.QtGui import QColor, QDrag, QFont, QPainter, QPen
 
 
 class Task:
@@ -170,6 +170,29 @@ class TaskManager:
                         results.append(task)
         return results
 
+class Settings:
+    meetingColor = QColor(150, 222, 209)
+    workColor = QColor(135, 206, 235)
+    breakColor = QColor(115, 147, 179)
+    snoozeColor = QColor(204, 204, 255)
+    assignedColorBg = QColor(135, 206, 235)
+    assignedColorFgCritical = QColor(220, 20, 20)
+    assignedColorFgHigh = QColor(200, 20, 20)
+    assignedColorFgMedium = QColor(0, 0, 0)
+    assignedColorFgLow = QColor(128, 128, 128)
+
+
+    slot_colors = [
+            meetingColor,
+            workColor,
+            breakColor,
+            workColor,
+            breakColor,
+            workColor, 
+            meetingColor,
+            breakColor
+        ]
+    
 
 class SettingsDialog(QDialog):
     def __init__(self, parent=None, slots_per_day=7, hours_per_slot=2):
@@ -252,6 +275,98 @@ class TaskDialog(QDialog):
             'priority': self.priority_combo.currentText(),
             'tags': tags
         }
+
+
+class TimeIndicatorTableWidget(QTableWidget):
+    """Custom QTableWidget with current time indicator line"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.time_slots = []  # Will store (start_time, end_time) tuples as QTime objects
+        self.show_time_indicator = True
+        
+    def set_time_slots(self, slots):
+        """Set the time slots for calculating line position"""
+        self.time_slots = []#slots
+        for i in range(len(slots) - 1):
+            start = QTime.fromString(slots[i], "H:mm")
+            end = QTime.fromString(slots[i+1], "H:mm")
+            self.time_slots.append((start, end))
+    
+    def paintEvent(self, event):
+        # Call parent paintEvent first to draw the table
+        super().paintEvent(event)
+        
+        if not self.show_time_indicator or not self.time_slots:
+            return
+        
+        # Only draw line if today is a weekday in the current week
+        current_time = QTime.currentTime()
+        current_date = QDate.currentDate()
+        
+        # Check if current date is in this week's range
+        parent_window = self.window()
+        '''
+        if hasattr(parent_window, 'current_week_start'):
+            week_start = parent_window.current_week_start
+            week_end = week_start.addDays(6)
+            
+            if not (week_start <= current_date <= week_end):
+                return
+            
+            # Get column for today (0=Monday, 4=Friday)
+            day_of_week = current_date.dayOfWeek() - 1
+            if day_of_week < 0 or day_of_week > 4:
+                return
+        else:
+            return
+        '''
+        # Find which time slot we're in and calculate Y position
+        y_position = self.get_time_position(current_time)
+        
+        if y_position is None:
+            return
+        
+        # Draw the line
+        painter = QPainter(self.viewport())
+        pen = QPen(QColor(255, 0, 0), 2, Qt.SolidLine)  # Red line, 2px thick
+        painter.setPen(pen)
+        
+        # Draw across the entire width
+        x_start = 0
+        x_end = self.viewport().width()
+        painter.drawLine(x_start, y_position, x_end, y_position)
+        
+        # Draw a small circle at the left edge
+        painter.setBrush(QColor(255, 0, 0))
+        painter.drawEllipse(x_start - 3, y_position - 3, 6, 6)
+        
+        painter.end()
+    
+    def get_time_position(self, current_time):
+        """Calculate Y position based on current time"""
+        if not self.time_slots:
+            return None
+        
+        # Find which slot the current time falls into
+        cumulative_y = self.horizontalHeader().height()
+        
+        for row, (start_time, end_time) in enumerate(self.time_slots):
+            # Check if current time is within this slot
+            if start_time <= current_time < end_time:
+                # Calculate position within this slot
+                total_minutes = start_time.secsTo(end_time) / 60.0
+                elapsed_minutes = start_time.secsTo(current_time) / 60.0
+                
+                progress = elapsed_minutes / total_minutes if total_minutes > 0 else 0
+                row_height = self.rowHeight(row)
+                
+                y_in_row = int(row_height * progress)
+                return cumulative_y + y_in_row
+            
+            cumulative_y += self.rowHeight(row)
+        
+        # If current time is after all slots, return None
+        return None
 
 
 class MainWindow(QMainWindow):
@@ -353,8 +468,8 @@ class MainWindow(QMainWindow):
         self.task_tree.customContextMenuRequested.connect(self.show_task_context_menu)
         self.task_tree.setDragEnabled(True)
         self.task_tree.setAcceptDrops(True)
-        self.task_tree.setDragDropMode(QTreeWidget.DragDrop)
-        self.task_tree.setDefaultDropAction(Qt.CopyAction)
+        self.task_tree.setDragDropMode(QTreeWidget.InternalMove)
+        self.task_tree.setDefaultDropAction(Qt.MoveAction)#Qt.CopyAction)
         self.task_tree.startDrag = lambda actions: self.start_tree_drag(actions)
         layout.addWidget(self.task_tree)
         
@@ -386,7 +501,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(header_layout)
         
         # Schedule table
-        self.schedule_table = QTableWidget()
+        self.schedule_table = TimeIndicatorTableWidget()
         self.setup_schedule_table()
         self.schedule_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.schedule_table.customContextMenuRequested.connect(self.show_schedule_context_menu)
@@ -452,34 +567,33 @@ class MainWindow(QMainWindow):
         return panel
     
     def setup_schedule_table(self):
-        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-        self.schedule_table.setRowCount(self.slots_per_day)
+        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        lslots = ['9:00', '10:00', '12:00', '12:30', '14:30',  '16:00', '18:00', '19:00', '23:00']
+        
+        self.schedule_table.set_time_slots(lslots)
+        
+        self.schedule_table.setRowCount(len(lslots)-1)
         self.schedule_table.setColumnCount(len(days))
         self.schedule_table.setHorizontalHeaderLabels(days)
         
-            
+        
         # Define colors for different time slots (alternating for visual distinction)
-        slot_colors = [
-            QColor(240, 248, 255),  # Alice Blue
-            QColor(255, 250, 240),  # Floral White
-            QColor(240, 255, 240),  # HoneydewHi
-            QColor(255, 245, 238),  # Seashell
-            QColor(245, 245, 245),  # White Smoke
-            QColor(255, 250, 250),  # Snow
-            QColor(255, 250, 250),  # Snow
-        ]
+        slot_colors = Settings.slot_colors
+        
+        # Set row heights and background colors
+        
+        for i in range(0, len(lslots)-1):
+            print(i, lslots[i], lslots[i+1])
+            #print(lslots[i+1])
+            
+            lstart = str(lslots[i]).replace(':', '')
+            lend = str(lslots[i+1]).replace(':', '')
+            r = float(lend) - float(lstart);
+            row_height = int((float(lend) - float(lstart))/2)
 
-        slots = [900, 1000, 1200, 1230, 1430,  1600, 1800, 1900];
-        self.schedule_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
-        for i in range(0, len(slots)-1):
-            start_hour = str(slots[i]) #9 + i * self.hours_per_slot
-            end_hour = str(slots[i+1])#start_hour + self.hours_per_slot
-            self.schedule_table.setVerticalHeaderItem(i, QTableWidgetItem(start_hour+ '-' + end_hour), )
+            self.schedule_table.setVerticalHeaderItem(i, QTableWidgetItem(str(lstart)+ '-' + str(lend)) )
             
             # Set different row height based on hours (taller rows for longer slots)
-            row_height = int((60 + slots[i+1] - slots[i])/2)#(self.hours_per_slot * 10)
-
-
             self.schedule_table.setRowHeight(i, row_height)
             
             # Apply background color to each cell in the row
@@ -558,14 +672,7 @@ class MainWindow(QMainWindow):
                     item.setData(Qt.UserRole, None)
         
         # Reapply background colors
-        slot_colors = [
-            QColor(240, 248, 255),  # Alice Blue
-            QColor(255, 250, 240),  # Floral White
-            QColor(240, 255, 240),  # Honeydew
-            QColor(255, 245, 238),  # Seashell
-            QColor(245, 245, 245),  # White Smoke
-            QColor(255, 250, 250),  # Snow
-        ]
+        slot_colors = Settings.slot_colors
         
         for row in range(self.schedule_table.rowCount()):
             color = slot_colors[row % len(slot_colors)]
@@ -590,20 +697,20 @@ class MainWindow(QMainWindow):
                             item.setData(Qt.UserRole, task_id)
                             
                             # Highlight scheduled tasks with a different color
-                            item.setBackground(QColor(173, 216, 230))  # Light Blue
+                            item.setBackground(Settings.assignedColorBg)  # Light Blue
                             
                             # Set font based on priority
                             font = item.font()
                             if task.priority == "Critical":
                                 font.setBold(True)
-                                item.setForeground(QColor(220, 20, 60))  # Crimson
+                                item.setForeground(Settings.assignedColorFgCritical)  # Crimson
                             elif task.priority == "High":
                                 font.setBold(True)
-                                item.setForeground(QColor(255, 140, 0))  # Dark Orange
+                                item.setForeground(Settings.assignedColorFgHigh)  # Dark Orange
                             elif task.priority == "Medium":
-                                item.setForeground(QColor(0, 0, 0))  # Black
+                                item.setForeground(Settings.assignedColorFgMedium)  # Black
                             else:  # Low
-                                item.setForeground(QColor(128, 128, 128))  # Gray
+                                item.setForeground(Settings.assignedColorFgLow)  # Gray
                             item.setFont(font)
     
     def on_task_selected(self, item, column):
@@ -840,6 +947,10 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Notes Shortlist", msg)
         else:
             QMessageBox.information(self, "Notes Shortlist", "No tasks with notes found in the last 7 days")
+    
+    def update_time_indicator(self):
+        """Force repaint of the schedule table to update time indicator"""
+        self.schedule_table.viewport().update()
 
 
 def main():
