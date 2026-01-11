@@ -170,6 +170,138 @@ class TaskManager:
                         results.append(task)
         return results
 
+
+class EditableTreeWidget(QTreeWidget):
+    """Custom TreeWidget with inline editing support"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.main_window = None
+        self.pending_new_item = None
+        self.make_subtask_of_previous = False
+        self.last_edited_item = None
+        self.currently_editing = False
+        
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
+            current = self.currentItem()
+            if current:
+                # Check if we're currently editing
+                if self.state() == QTreeWidget.EditingState:
+                    # Close the editor which will trigger commitData
+                    self.closePersistentEditor(current, 0)
+                    event.accept()
+                    return
+                else:
+                    # Start editing the current item
+                    self.editItem(current, 0)
+                    return
+        elif event.key() == Qt.Key_Tab:
+            # If we're editing, close the editor first
+            if self.state() == QTreeWidget.EditingState:
+                current = self.currentItem()
+                if current:
+                    self.closePersistentEditor(current, 0)
+            # Set flag to make next item a subtask
+            self.make_subtask_of_previous = True
+            event.accept()
+            return
+        
+        super().keyPressEvent(event)
+    
+    def commitData(self, editor):
+        """Called when editing is finished"""
+        
+        super().commitData(editor)
+        
+        current = self.currentItem()
+        if not current:
+            return
+        
+        new_text = current.text(0).strip()
+        task_id = current.data(0, Qt.UserRole)
+        
+        # If this was a pending new item
+        if task_id is None or task_id == -1:
+            if new_text:
+                # Create the actual task
+                parent_id = None
+                parent_item = current.parent()
+                
+                if parent_item:
+                    parent_id = parent_item.data(0, Qt.UserRole)
+                
+                task = self.main_window.task_manager.create_task(new_text, parent_id=parent_id)
+                current.setData(0, Qt.UserRole, task.id)
+                current.setText(1, task.priority)
+                current.setForeground(0, QColor(0, 0, 0))  # Reset to normal color
+                self.last_edited_item = current
+                self.pending_new_item = None
+                
+                # Create a new pending item for the next entry
+                QTimer.singleShot(10, lambda: self.create_pending_item(current))
+            else:
+                # Empty text, remove the pending item
+                parent = current.parent()
+                if parent:
+                    parent.removeChild(current)
+                else:
+                    index = self.indexOfTopLevelItem(current)
+                    self.takeTopLevelItem(index)
+                self.pending_new_item = None
+        else:
+            # Editing existing task
+            print('existing called')
+            if new_text:
+                self.main_window.task_manager.update_task(task_id, title=new_text)
+                self.last_edited_item = current
+                
+                # Create a new pending item after editing existing task
+                QTimer.singleShot(10, lambda: self.create_pending_item(current))
+            else:
+                # If text is cleared, restore the original text
+                if task_id in self.main_window.task_manager.tasks:
+                    task = self.main_window.task_manager.tasks[task_id]
+                    current.setText(0, task.title)
+    
+    def create_pending_item(self, reference_item):
+        """Create a new pending item for quick entry"""
+        print('create_pending_item called')
+        # Don't create if there's already a pending item
+        if self.pending_new_item and self.pending_new_item in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
+            return
+        
+        new_item = QTreeWidgetItem()
+        new_item.setText(0, "")
+        new_item.setData(0, Qt.UserRole, -1)  # Temporary ID
+        new_item.setFlags(new_item.flags() | Qt.ItemIsEditable)
+        
+        # Make item slightly gray to indicate it's pending
+        new_item.setForeground(0, QColor(150, 150, 150))
+        
+        if self.make_subtask_of_previous and reference_item:
+            # Add as child of the reference item
+            reference_item.addChild(new_item)
+            reference_item.setExpanded(True)
+            self.make_subtask_of_previous = False
+        else:
+            # Add as sibling
+            parent = reference_item.parent() if reference_item else None
+            if parent:
+                index = parent.indexOfChild(reference_item)
+                parent.insertChild(index + 1, new_item)
+            else:
+                if reference_item:
+                    index = self.indexOfTopLevelItem(reference_item)
+                    self.insertTopLevelItem(index + 1, new_item)
+                else:
+                    self.addTopLevelItem(new_item)
+        
+        self.pending_new_item = new_item
+        self.setCurrentItem(new_item)
+        self.editItem(new_item, 0)
+
+
 class Settings:
     meetingColor = QColor(150, 222, 209)
     workColor = QColor(135, 206, 235)
@@ -181,7 +313,6 @@ class Settings:
     assignedColorFgMedium = QColor(0, 0, 0)
     assignedColorFgLow = QColor(128, 128, 128)
 
-
     slot_colors = [
             meetingColor,
             workColor,
@@ -192,7 +323,7 @@ class Settings:
             meetingColor,
             breakColor
         ]
-    
+
 
 class SettingsDialog(QDialog):
     def __init__(self, parent=None, slots_per_day=7, hours_per_slot=2):
@@ -286,7 +417,7 @@ class TimeIndicatorTableWidget(QTableWidget):
         
     def set_time_slots(self, slots):
         """Set the time slots for calculating line position"""
-        self.time_slots = []#slots
+        self.time_slots = []
         for i in range(len(slots) - 1):
             start = QTime.fromString(slots[i], "H:mm")
             end = QTime.fromString(slots[i+1], "H:mm")
@@ -299,27 +430,8 @@ class TimeIndicatorTableWidget(QTableWidget):
         if not self.show_time_indicator or not self.time_slots:
             return
         
-        # Only draw line if today is a weekday in the current week
         current_time = QTime.currentTime()
-        current_date = QDate.currentDate()
         
-        # Check if current date is in this week's range
-        parent_window = self.window()
-        '''
-        if hasattr(parent_window, 'current_week_start'):
-            week_start = parent_window.current_week_start
-            week_end = week_start.addDays(6)
-            
-            if not (week_start <= current_date <= week_end):
-                return
-            
-            # Get column for today (0=Monday, 4=Friday)
-            day_of_week = current_date.dayOfWeek() - 1
-            if day_of_week < 0 or day_of_week > 4:
-                return
-        else:
-            return
-        '''
         # Find which time slot we're in and calculate Y position
         y_position = self.get_time_position(current_time)
         
@@ -380,6 +492,11 @@ class MainWindow(QMainWindow):
         self.init_ui()
         self.load_tasks()
         self.load_schedule()
+        
+        # Setup timer for time indicator updates
+        self.time_indicator_timer = QTimer()
+        self.time_indicator_timer.timeout.connect(self.update_time_indicator)
+        self.time_indicator_timer.start(60000)  # Update every minute
     
     def init_ui(self):
         self.setWindowTitle("Task Manager & Weekly Planner")
@@ -447,6 +564,11 @@ class MainWindow(QMainWindow):
         header.setStyleSheet("font-weight: bold; font-size: 14px;")
         layout.addWidget(header)
         
+        # Info label
+        info_label = QLabel("Press Enter to add/edit tasks • Tab to indent • Empty to skip")
+        info_label.setStyleSheet("font-size: 10px; color: gray;")
+        layout.addWidget(info_label)
+        
         # Buttons
         btn_layout = QHBoxLayout()
         new_btn = QPushButton("New Task")
@@ -457,10 +579,15 @@ class MainWindow(QMainWindow):
         new_child_btn.clicked.connect(self.create_new_subtask)
         btn_layout.addWidget(new_child_btn)
         
+        quick_add_btn = QPushButton("Quick Add (Enter)")
+        quick_add_btn.clicked.connect(self.start_quick_add)
+        btn_layout.addWidget(quick_add_btn)
+        
         layout.addLayout(btn_layout)
         
-        # Task tree
-        self.task_tree = QTreeWidget()
+        # Task tree - use custom editable tree widget
+        self.task_tree = EditableTreeWidget()
+        self.task_tree.main_window = self
         self.task_tree.setHeaderLabels(["Title", "Priority", "Tags"])
         self.task_tree.setColumnWidth(0, 200)
         self.task_tree.itemClicked.connect(self.on_task_selected)
@@ -469,7 +596,7 @@ class MainWindow(QMainWindow):
         self.task_tree.setDragEnabled(True)
         self.task_tree.setAcceptDrops(True)
         self.task_tree.setDragDropMode(QTreeWidget.InternalMove)
-        self.task_tree.setDefaultDropAction(Qt.MoveAction)#Qt.CopyAction)
+        self.task_tree.setDefaultDropAction(Qt.MoveAction)
         self.task_tree.startDrag = lambda actions: self.start_tree_drag(actions)
         layout.addWidget(self.task_tree)
         
@@ -576,27 +703,17 @@ class MainWindow(QMainWindow):
         self.schedule_table.setColumnCount(len(days))
         self.schedule_table.setHorizontalHeaderLabels(days)
         
-        
-        # Define colors for different time slots (alternating for visual distinction)
         slot_colors = Settings.slot_colors
         
-        # Set row heights and background colors
-        
         for i in range(0, len(lslots)-1):
-            print(i, lslots[i], lslots[i+1])
-            #print(lslots[i+1])
-            
             lstart = str(lslots[i]).replace(':', '')
             lend = str(lslots[i+1]).replace(':', '')
-            r = float(lend) - float(lstart);
+            r = float(lend) - float(lstart)
             row_height = int((float(lend) - float(lstart))/2)
 
-            self.schedule_table.setVerticalHeaderItem(i, QTableWidgetItem(str(lstart)+ '-' + str(lend)) )
-            
-            # Set different row height based on hours (taller rows for longer slots)
+            self.schedule_table.setVerticalHeaderItem(i, QTableWidgetItem(str(lstart)+ '-' + str(lend)))
             self.schedule_table.setRowHeight(i, row_height)
             
-            # Apply background color to each cell in the row
             color = slot_colors[i % len(slot_colors)]
             for j in range(len(days)):
                 item = QTableWidgetItem("")
@@ -611,7 +728,7 @@ class MainWindow(QMainWindow):
         return date.addDays(-days_to_monday)
     
     def update_week_label(self):
-        end_date = self.current_week_start.addDays(4)
+        end_date = self.current_week_start.addDays(6)
         self.week_label.setText(f"{self.current_week_start.toString('MMM dd')} - {end_date.toString('MMM dd, yyyy')}")
     
     def prev_week(self):
@@ -623,6 +740,24 @@ class MainWindow(QMainWindow):
         self.current_week_start = self.current_week_start.addDays(7)
         self.update_week_label()
         self.load_schedule()
+    
+    def start_quick_add(self):
+        """Start the quick add mode by creating a pending item"""
+        if self.task_tree.pending_new_item:
+            # Already in quick add mode
+            return
+        
+        # Create a new pending item at the root level
+        new_item = QTreeWidgetItem()
+        new_item.setText(0, "")
+        new_item.setData(0, Qt.UserRole, -1)
+        new_item.setFlags(new_item.flags() | Qt.ItemIsEditable)
+        new_item.setForeground(0, QColor(150, 150, 150))
+        
+        self.task_tree.addTopLevelItem(new_item)
+        self.task_tree.pending_new_item = new_item
+        self.task_tree.setCurrentItem(new_item)
+        self.task_tree.editItem(new_item, 0)
     
     def load_tasks(self):
         self.task_tree.clear()
@@ -637,6 +772,7 @@ class MainWindow(QMainWindow):
         item.setText(1, task.priority)
         item.setText(2, ", ".join(task.tags))
         item.setData(0, Qt.UserRole, task.id)
+        item.setFlags(item.flags() | Qt.ItemIsEditable)
         
         # Style based on state
         if task.state == "completed":
@@ -682,7 +818,7 @@ class MainWindow(QMainWindow):
                     item.setBackground(color)
         
         # Load scheduled tasks
-        for day_offset in range(5):
+        for day_offset in range(7):
             date = self.current_week_start.addDays(day_offset)
             date_str = date.toString("yyyy-MM-dd")
             
@@ -696,26 +832,24 @@ class MainWindow(QMainWindow):
                             item.setText(task.title)
                             item.setData(Qt.UserRole, task_id)
                             
-                            # Highlight scheduled tasks with a different color
-                            item.setBackground(Settings.assignedColorBg)  # Light Blue
+                            item.setBackground(Settings.assignedColorBg)
                             
-                            # Set font based on priority
                             font = item.font()
                             if task.priority == "Critical":
                                 font.setBold(True)
-                                item.setForeground(Settings.assignedColorFgCritical)  # Crimson
+                                item.setForeground(Settings.assignedColorFgCritical)
                             elif task.priority == "High":
                                 font.setBold(True)
-                                item.setForeground(Settings.assignedColorFgHigh)  # Dark Orange
+                                item.setForeground(Settings.assignedColorFgHigh)
                             elif task.priority == "Medium":
-                                item.setForeground(Settings.assignedColorFgMedium)  # Black
-                            else:  # Low
-                                item.setForeground(Settings.assignedColorFgLow)  # Gray
+                                item.setForeground(Settings.assignedColorFgMedium)
+                            else:
+                                item.setForeground(Settings.assignedColorFgLow)
                             item.setFont(font)
     
     def on_task_selected(self, item, column):
         task_id = item.data(0, Qt.UserRole)
-        if task_id in self.task_manager.tasks:
+        if task_id and task_id != -1 and task_id in self.task_manager.tasks:
             self.current_task = self.task_manager.tasks[task_id]
             self.display_task_details()
     
@@ -849,7 +983,6 @@ class MainWindow(QMainWindow):
         mime_data.setText(str(task_id))
         drag.setMimeData(mime_data)
         
-        # Use CopyAction to prevent removal from tree
         drag.exec_(Qt.CopyAction)
     
     def schedule_drag_enter(self, event):
@@ -864,7 +997,6 @@ class MainWindow(QMainWindow):
         col = self.schedule_table.columnAt(position.x())
         
         if row >= 0 and col >= 0:
-            # Check if drag is from task tree
             mime_data = event.mimeData()
             if mime_data.hasText():
                 try:
@@ -878,7 +1010,6 @@ class MainWindow(QMainWindow):
                 except ValueError:
                     pass
             
-            # Handle drag from within schedule table (moving between slots)
             source = event.source()
             if source == self.schedule_table:
                 source_row = self.schedule_table.currentRow()
@@ -888,11 +1019,9 @@ class MainWindow(QMainWindow):
                 if source_item:
                     task_id = source_item.data(Qt.UserRole)
                     
-                    # Remove from old slot
                     old_date = self.current_week_start.addDays(source_col)
                     self.task_manager.unschedule_task(old_date.toString("yyyy-MM-dd"), str(source_row))
                     
-                    # Add to new slot
                     new_date = self.current_week_start.addDays(col)
                     self.task_manager.schedule_task(task_id, new_date.toString("yyyy-MM-dd"), str(row))
                     
@@ -903,8 +1032,6 @@ class MainWindow(QMainWindow):
         event.ignore()
     
     def on_task_tree_drop(self):
-        # Handle reorganization of task tree
-        # This would need custom implementation to update parent_id
         pass
     
     def show_settings_dialog(self):
@@ -915,7 +1042,6 @@ class MainWindow(QMainWindow):
             self.load_schedule()
     
     def show_search_dialog(self):
-        text, ok = QLineEdit().text(), True
         from PyQt5.QtWidgets import QInputDialog
         text, ok = QInputDialog.getText(self, "Search Tasks", "Enter search keyword:")
         
