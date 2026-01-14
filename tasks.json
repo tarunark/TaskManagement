@@ -11,7 +11,9 @@
       "completed_date": null,
       "state": "active",
       "notes": "",
-      "references": []
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
     },
     {
       "id": 2,
@@ -24,7 +26,9 @@
       "completed_date": null,
       "state": "active",
       "notes": "",
-      "references": []
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
     },
     {
       "id": 3,
@@ -36,8 +40,10 @@
       "created_date": "2026-01-09T16:48:49.850423",
       "completed_date": null,
       "state": "active",
-      "notes": "sssf\t",
-      "references": [
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": [
         "dddf"
       ]
     },
@@ -51,8 +57,10 @@
       "created_date": "2026-01-09T16:48:52.106161",
       "completed_date": null,
       "state": "active",
-      "notes": "",
-      "references": []
+      "notes": "ssss\nddd\n\nsbsjbsjhs",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
     },
     {
       "id": 5,
@@ -64,8 +72,10 @@
       "created_date": "2026-01-09T16:49:07.410353",
       "completed_date": null,
       "state": "active",
-      "notes": "test\n",
-      "references": []
+      "notes": "test\n<b> test1 </b>\n\n",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
     },
     {
       "id": 6,
@@ -77,8 +87,10 @@
       "created_date": "2026-01-11T21:03:31.379974",
       "completed_date": null,
       "state": "active",
-      "notes": "",
-      "references": []
+      "notes": ". Aaa has a note\n. Nxt week\n\n. test\n    . <b>firtess<\\b>\n\n\n\n\n_________________________________\n\n\n_________________________________\n\n\n\n_________________________________\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
     },
     {
       "id": 7,
@@ -88,10 +100,284 @@
       "priority": "Medium",
       "tags": [],
       "created_date": "2026-01-11T21:03:34.683614",
+      "completed_date": "2026-01-11T23:08:27.844128",
+      "state": "completed",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": 8,
+      "title": "wwwww",
+      "parent_id": null,
+      "description": "sss",
+      "priority": "Medium",
+      "tags": [
+        "Alignment"
+      ],
+      "created_date": "2026-01-11T21:05:22.127318",
       "completed_date": null,
       "state": "active",
       "notes": "",
-      "references": []
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": 9,
+      "title": "wwwww",
+      "parent_id": null,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-11T21:05:25.168813",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": 10,
+      "title": "aaa2",
+      "parent_id": 3,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-11T23:06:53.974020",
+      "completed_date": "2026-01-11T23:08:24.710045",
+      "state": "completed",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "260112_141612",
+      "title": "sssws",
+      "parent_id": null,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-12T14:16:12.879775",
+      "completed_date": "2026-01-14T19:09:10.810218",
+      "state": "completed",
+      "notes": "asss\n\nfree\nsss\n\nsddsds  ",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "260113_111928",
+      "title": "ssqws",
+      "parent_id": null,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-13T11:19:28.179425",
+      "completed_date": "2026-01-14T19:09:18.788631",
+      "state": "completed",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "260114_124855",
+      "title": "Abc",
+      "parent_id": 4,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-14T12:48:55.494926",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "260114_194911",
+      "title": "sss",
+      "parent_id": null,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-14T19:49:11.564863",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "260114_194912",
+      "title": "sss",
+      "parent_id": null,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-14T19:49:12.875957",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "260114_194915",
+      "title": "ssssssss",
+      "parent_id": null,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-14T19:49:15.091922",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "260114_194920",
+      "title": "ssss",
+      "parent_id": null,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-14T19:49:20.892438",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "260114_194922",
+      "title": "s",
+      "parent_id": null,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-14T19:49:22.756404",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "260114_194923",
+      "title": "s",
+      "parent_id": null,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-14T19:49:23.827876",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "260114_194924",
+      "title": "s",
+      "parent_id": null,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-14T19:49:24.195884",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "260114_194926",
+      "title": "qkjhkjhskjhs",
+      "parent_id": null,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-14T19:49:26.107871",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "260114_194927",
+      "title": ";kjslkjs",
+      "parent_id": null,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-14T19:49:27.924077",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "260114_202152",
+      "title": "ss",
+      "parent_id": "260114_194924",
+      "description": "aa",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-14T20:21:52.682709",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "260114_202205",
+      "title": "ss1",
+      "parent_id": "260114_202152",
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-14T20:22:05.736519",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "260114_202214",
+      "title": "wss1",
+      "parent_id": 9,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-14T20:22:14.989632",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
     }
   ],
   "schedule": {
@@ -108,16 +394,45 @@
     },
     "2026-01-09": {
       "1": 5,
-      "3": 3
+      "3": 3,
+      "5": 8
     },
     "2026-01-07": {
-      "3": 3,
+      "3": 10,
       "1": 2,
       "5": 1
     },
     "2026-01-10": {
       "4": null
+    },
+    "2026-01-11": {
+      "3": 10
+    },
+    "2026-01-12": {
+      "4": "260112_141612"
+    },
+    "2026-01-13": {
+      "1": "260112_141612",
+      "3": 6,
+      "5": "260114_194926",
+      "4": "260114_194915"
+    },
+    "2026-01-16": {
+      "3": "260112_141612",
+      "4": "260114_194920"
+    },
+    "2026-01-14": {
+      "3": "260114_194922",
+      "5": 6,
+      "1": 6,
+      "4": "260112_141612"
+    },
+    "2026-01-17": {},
+    "2026-01-15": {
+      "1": "260112_141612",
+      "5": "260114_194922",
+      "4": "260112_141612"
     }
   },
-  "next_id": 8
+  "next_id": 31
 }

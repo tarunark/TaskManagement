@@ -1,3 +1,4 @@
+import os
 import sys
 import json
 from datetime import datetime, timedelta
@@ -11,11 +12,24 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt5.QtCore import Qt, QDate, QMimeData, QTimer, QTime
 from PyQt5.QtGui import QColor, QDrag, QFont, QPainter, QPen
 
+def writeToFile(id, txt):
+    with open(Settings.NotesFolder + '\\' + str(id) + '.txt', 'w') as f:
+        f.write(txt)
+    pass
+
+def readFromFile(id):
+    txt = ''
+    file_path = Settings.NotesFolder + '\\' + str(id) + '.txt'
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as f:
+            txt =f.read()
+    
+    return txt
 
 class Task:
     def __init__(self, id, title, parent_id=None, description="", priority="Medium",
                  tags=None, created_date=None, completed_date=None, state="active",
-                 notes="", references=None):
+                 notes="", summary=None, dirty=False, futureSlotCount=0):
         self.id = id
         self.title = title
         self.parent_id = parent_id
@@ -26,7 +40,9 @@ class Task:
         self.completed_date = completed_date
         self.state = state  # active, completed, archived, dormant
         self.notes = notes
-        self.references = references or []
+        self.dirty = False
+        self.futureSlotCount = 0
+        self.summary = summary or []
     
     def to_dict(self):
         return {
@@ -40,12 +56,16 @@ class Task:
             'completed_date': self.completed_date,
             'state': self.state,
             'notes': self.notes,
-            'references': self.references
+            'dirty' : self.dirty,
+            'futureSlotCount' : self.futureSlotCount,
+            'summary': self.summary
         }
     
     @staticmethod
     def from_dict(data):
-        return Task(**data)
+        result = Task(**data)
+        result.notes = readFromFile(result.id)
+        return result
 
 
 class TaskManager:
@@ -94,23 +114,28 @@ class TaskManager:
                 task.state = "dormant"
     
     def create_task(self, title, parent_id=None, **kwargs):
-        task = Task(self.next_id, title, parent_id, **kwargs)
-        self.tasks[self.next_id] = task
+        #import datetime
+        now=datetime.now()
+        newId=now.strftime('%y%m%d_%H%M%S')
+        
+        task = Task(newId, title, parent_id, **kwargs)
+        self.tasks[newId] = task
         self.next_id += 1
         self.save_data()
         return task
     
-    def update_task(self, task_id, **kwargs):
+    def update_task(self, task_id, save = True, **kwargs ):
         if task_id in self.tasks:
             task = self.tasks[task_id]
             for key, value in kwargs.items():
                 if hasattr(task, key):
                     setattr(task, key, value)
-            self.save_data()
+            if(save):
+                self.save_data()
     
     def delete_task(self, task_id):
         if task_id in self.tasks:
-            # Remove children references
+            # Remove children summary
             for task in self.tasks.values():
                 if task.parent_id == task_id:
                     task.parent_id = None
@@ -182,6 +207,7 @@ class EditableTreeWidget(QTreeWidget):
         self.last_edited_item = None
         self.currently_editing = False
         
+    '''
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
             current = self.currentItem()
@@ -208,7 +234,7 @@ class EditableTreeWidget(QTreeWidget):
             return
         
         super().keyPressEvent(event)
-    
+    '''
     def commitData(self, editor):
         """Called when editing is finished"""
         
@@ -251,7 +277,7 @@ class EditableTreeWidget(QTreeWidget):
                 self.pending_new_item = None
         else:
             # Editing existing task
-            print('existing called')
+            #print('existing called')
             if new_text:
                 self.main_window.task_manager.update_task(task_id, title=new_text)
                 self.last_edited_item = current
@@ -266,7 +292,7 @@ class EditableTreeWidget(QTreeWidget):
     
     def create_pending_item(self, reference_item):
         """Create a new pending item for quick entry"""
-        print('create_pending_item called')
+        #print('create_pending_item called')
         # Don't create if there's already a pending item
         if self.pending_new_item and self.pending_new_item in [self.topLevelItem(i) for i in range(self.topLevelItemCount())]:
             return
@@ -303,6 +329,7 @@ class EditableTreeWidget(QTreeWidget):
 
 
 class Settings:
+    NotesFolder = r'E:\Workshop\NotesFolder'
     meetingColor = QColor(150, 222, 209)
     workColor = QColor(135, 206, 235)
     breakColor = QColor(115, 147, 179)
@@ -323,6 +350,10 @@ class Settings:
             meetingColor,
             breakColor
         ]
+    
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    lslots = ['9:00', '10:00', '12:00', '12:30', '14:30',  '16:00', '18:00', '19:00', '23:00']
+
 
 
 class SettingsDialog(QDialog):
@@ -446,6 +477,7 @@ class TimeIndicatorTableWidget(QTableWidget):
         # Draw across the entire width
         x_start = 0
         x_end = self.viewport().width()
+        painter.drawLine(x_start, 0, x_end, 0)
         painter.drawLine(x_start, y_position, x_end, y_position)
         
         # Draw a small circle at the left edge
@@ -460,7 +492,7 @@ class TimeIndicatorTableWidget(QTableWidget):
             return None
         
         # Find which slot the current time falls into
-        cumulative_y = self.horizontalHeader().height()
+        cumulative_y = 0#self.horizontalHeader().height()
         
         for row, (start_time, end_time) in enumerate(self.time_slots):
             # Check if current time is within this slot
@@ -473,9 +505,12 @@ class TimeIndicatorTableWidget(QTableWidget):
                 row_height = self.rowHeight(row)
                 
                 y_in_row = int(row_height * progress)
+                
                 return cumulative_y + y_in_row
             
             cumulative_y += self.rowHeight(row)
+            
+
         
         # If current time is after all slots, return None
         return None
@@ -584,24 +619,76 @@ class MainWindow(QMainWindow):
         btn_layout.addWidget(quick_add_btn)
         
         layout.addLayout(btn_layout)
+
+                # Search field
+        self.search_field = QLineEdit()
+        self.search_field.setPlaceholderText('Type to filter tasks...')
+        self.search_field.textChanged.connect(self.filter_tasks)
+        layout.addWidget(self.search_field)
         
         # Task tree - use custom editable tree widget
-        self.task_tree = EditableTreeWidget()
+        self.task_tree = QTreeWidget()#EditableTreeWidget()
         self.task_tree.main_window = self
         self.task_tree.setHeaderLabels(["Title", "Priority", "Tags"])
         self.task_tree.setColumnWidth(0, 200)
+        self.task_tree.itemDoubleClicked.connect(self.edit_current_task)
         self.task_tree.itemClicked.connect(self.on_task_selected)
         self.task_tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.task_tree.customContextMenuRequested.connect(self.show_task_context_menu)
         self.task_tree.setDragEnabled(True)
         self.task_tree.setAcceptDrops(True)
+        self.task_tree.dragEnterEvent = self.tree_drag_enter
+        self.task_tree.dragMoveEvent = self.tree_drag_move
+
+        self.task_tree.setSelectionMode(QTreeWidget.SingleSelection)
+        self.task_tree.setDropIndicatorShown(True)
         self.task_tree.setDragDropMode(QTreeWidget.InternalMove)
         self.task_tree.setDefaultDropAction(Qt.MoveAction)
         self.task_tree.startDrag = lambda actions: self.start_tree_drag(actions)
+        #self.task_tree.dropItem = lambda actions: self.drapDropItem(actions)
         layout.addWidget(self.task_tree)
         
         return panel
     
+    def filter_tasks(self, search_text):
+        """Filter tree items based on search text"""
+        search_text = search_text.lower()
+        
+        def set_visibility(item, visible):
+            """Recursively set visibility of item and children"""
+            item.setHidden(not visible)
+            for i in range(item.childCount()):
+                set_visibility(item.child(i), visible)
+        
+        def check_match(item):
+            """Check if item or any child matches search"""
+            text_match = search_text in item.text(0).lower()
+            
+            # Check children
+            child_match = False
+            for i in range(item.childCount()):
+                if check_match(item.child(i)):
+                    child_match = True
+            
+            # Show if this item or any child matches
+            is_visible = text_match or child_match
+            item.setHidden(not is_visible)
+            
+            # Expand if children are visible
+            if child_match:
+                item.setExpanded(True)
+            
+            return is_visible
+        
+        # If search is empty, show everything
+        if not search_text:
+            for i in range(self.task_tree.topLevelItemCount()):
+                set_visibility(self.task_tree.topLevelItem(i), True)
+        else:
+            # Check each top-level item
+            for i in range(self.task_tree.topLevelItemCount()):
+                check_match(self.task_tree.topLevelItem(i))
+
     def create_schedule_panel(self):
         panel = QWidget()
         layout = QVBoxLayout(panel)
@@ -631,6 +718,7 @@ class MainWindow(QMainWindow):
         self.schedule_table = TimeIndicatorTableWidget()
         self.setup_schedule_table()
         self.schedule_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.schedule_table.cellClicked.connect(self.show_schedule_selected_item)
         self.schedule_table.customContextMenuRequested.connect(self.show_schedule_context_menu)
         self.schedule_table.setAcceptDrops(True)
         self.schedule_table.setDragEnabled(True)
@@ -661,14 +749,31 @@ class MainWindow(QMainWindow):
         layout.addWidget(info_group)
         
         # Notes
-        notes_label = QLabel("Notes:")
-        layout.addWidget(notes_label)
+        self.notes_label = QLabel("Notes:")
+        layout.addWidget(self.notes_label)
         self.notes_edit = QTextEdit()
         self.notes_edit.textChanged.connect(self.on_notes_changed)
         layout.addWidget(self.notes_edit)
+
+        btn_layout = QHBoxLayout()
+        new_btn = QPushButton("restore")
+        new_btn.clicked.connect(self.restoreNotes)
+        btn_layout.addWidget(new_btn)
         
-        # References
-        refs_label = QLabel("References:")
+        new_btn = QPushButton("save")
+        new_btn.clicked.connect(self.commitNotes)
+        btn_layout.addWidget(new_btn)
+
+        new_btn = QPushButton("extern")
+        new_btn.clicked.connect(self.externEdit)
+        btn_layout.addWidget(new_btn)
+
+
+        layout.addLayout(btn_layout)
+
+
+        # summary
+        refs_label = QLabel("Summary:")
         layout.addWidget(refs_label)
         self.refs_edit = QTextEdit()
         self.refs_edit.setMaximumHeight(80)
@@ -693,15 +798,37 @@ class MainWindow(QMainWindow):
         
         return panel
     
+    def externEdit(self):
+        print('launch notepad ++')
+        pass
+
+    def restoreNotes(self ):
+        txt = readFromFile(self.current_task.id)
+        self.notes_edit.setPlainText(txt)
+        #self.task_manager.update_task(self.current_task.id, save= False, notes='')
+        self.current_task.dirty = False
+        self.notes_label.setText("Notes:")
+        pass
+
+    def commitNotes(self):
+        print('commit')
+        txt = self.notes_edit.toPlainText()
+        writeToFile(self.current_task.id, txt)
+        #self.task_manager.update_task(self.current_task.id, save= False, notes='')
+        self.current_task.dirty = False
+        self.notes_label.setText("Notes:")
+        pass
+
+
+    
     def setup_schedule_table(self):
-        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        lslots = ['9:00', '10:00', '12:00', '12:30', '14:30',  '16:00', '18:00', '19:00', '23:00']
+        lslots = Settings.lslots.copy()
         
         self.schedule_table.set_time_slots(lslots)
         
         self.schedule_table.setRowCount(len(lslots)-1)
-        self.schedule_table.setColumnCount(len(days))
-        self.schedule_table.setHorizontalHeaderLabels(days)
+        self.schedule_table.setColumnCount(len(Settings.days))
+        self.schedule_table.setHorizontalHeaderLabels(Settings.days)
         
         slot_colors = Settings.slot_colors
         
@@ -715,9 +842,12 @@ class MainWindow(QMainWindow):
             self.schedule_table.setRowHeight(i, row_height)
             
             color = slot_colors[i % len(slot_colors)]
-            for j in range(len(days)):
+            for j in range(len(Settings.days)):
                 item = QTableWidgetItem("")
-                item.setBackground(color)
+                if(j<5):
+                    item.setBackground(color)
+                else:
+                    item.setBackground(Settings.snoozeColor)
                 self.schedule_table.setItem(i, j, item)
         
         self.schedule_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -815,7 +945,10 @@ class MainWindow(QMainWindow):
             for col in range(self.schedule_table.columnCount()):
                 item = self.schedule_table.item(row, col)
                 if item:
-                    item.setBackground(color)
+                    if(col<5):
+                        item.setBackground(color)
+                    else:
+                        item.setBackground(Settings.breakColor)
         
         # Load scheduled tasks
         for day_offset in range(7):
@@ -849,38 +982,70 @@ class MainWindow(QMainWindow):
     
     def on_task_selected(self, item, column):
         task_id = item.data(0, Qt.UserRole)
+        task_text = item.text(column)
         if task_id and task_id != -1 and task_id in self.task_manager.tasks:
             self.current_task = self.task_manager.tasks[task_id]
             self.display_task_details()
+
+
+        self.highlight_table_items(task_text, column)
     
+    def highlight_table_items(self, task_text, column):
+        slot_colors = Settings.slot_colors
+        
+        for row in range(self.schedule_table.rowCount()):
+            color = slot_colors[row % len(slot_colors)]
+
+            for col in range(self.schedule_table.columnCount()):
+                item = self.schedule_table.item(row, col)
+                if item:
+                    if(col<5):
+                        item.setBackground(color)
+                    else:
+                        item.setBackground(Settings.breakColor)
+                if(item.text()==task_text):
+                    item.setBackground(Settings.snoozeColor)
+
+        pass
+
     def display_task_details(self):
         if not self.current_task:
             return
         
-        info = f"<b>Title:</b> {self.current_task.title}<br>"
-        info += f"<b>Description:</b> {self.current_task.description}<br>"
-        info += f"<b>Priority:</b> {self.current_task.priority}<br>"
-        info += f"<b>Tags:</b> {', '.join(self.current_task.tags)}<br>"
-        info += f"<b>Created:</b> {self.current_task.created_date[:10]}<br>"
-        info += f"<b>State:</b> {self.current_task.state}"
-        
+        info =  f"<pre>"
+        info += f"<b>Title:</b>           {self.current_task.title}<br>"
+        info += f"<b>Id:</b>              {self.current_task.id}<br>"
+        info += f"<b>State:</b>           {self.current_task.state}<br>"
+        info += f"<b>Priority:</b>        {self.current_task.priority}<br>"
+        info += f"<b>Created:</b>         {self.current_task.created_date[:10]}<br>"
+        info += f"<b>Description:</b>     {self.current_task.description}<br>"
+        info += f"<b>Tags:</b>            {', '.join(self.current_task.tags)}<br> </pre>"
         self.task_info_label.setText(info)
+
         self.notes_edit.blockSignals(True)
         self.notes_edit.setPlainText(self.current_task.notes)
         self.notes_edit.blockSignals(False)
         
         self.refs_edit.blockSignals(True)
-        self.refs_edit.setPlainText("\n".join(self.current_task.references))
+        self.refs_edit.setPlainText("\n".join(self.current_task.summary))
         self.refs_edit.blockSignals(False)
+
+        if(self.current_task.dirty):
+            self.notes_label.setText("Notes*:")
+        else:
+            self.notes_label.setText("Notes:")
     
     def on_notes_changed(self):
         if self.current_task:
-            self.task_manager.update_task(self.current_task.id, notes=self.notes_edit.toPlainText())
+            print('notes dirty')
+            self.notes_label.setText("Notes*:")
+            self.task_manager.update_task(self.current_task.id, save = False, notes=self.notes_edit.toPlainText())
+            self.task_manager.update_task(self.current_task.id, save = False, dirty=True)
     
     def on_refs_changed(self):
         if self.current_task:
             refs = [r.strip() for r in self.refs_edit.toPlainText().split("\n") if r.strip()]
-            self.task_manager.update_task(self.current_task.id, references=refs)
+            self.task_manager.update_task(self.current_task.id, summary=refs)
     
     def create_new_task(self):
         dialog = TaskDialog(self)
@@ -969,6 +1134,22 @@ class MainWindow(QMainWindow):
                 self.task_manager.unschedule_task(date.toString("yyyy-MM-dd"), str(row))
                 self.load_schedule()
     
+    def show_schedule_selected_item(self, row, col):
+        
+        item = self.schedule_table.item(row, col)
+        #if item:
+        #   print(f"Content: {item.text()}")
+        items = self.task_tree.findItems(item.text(), Qt.MatchRecursive)
+        if items:
+            self.task_tree.setCurrentItem(items[0])
+            task_id = item.data(Qt.UserRole)
+            self.current_task = self.task_manager.tasks[task_id]
+            self.display_task_details()
+
+            #print(f"Selected: {item}")
+        #else:
+            #print(f"Item '{item.text()}' not found")
+
     def start_tree_drag(self, supported_actions):
         """Custom drag handler to prevent item removal from tree"""
         selected_items = self.task_tree.selectedItems()
@@ -977,13 +1158,18 @@ class MainWindow(QMainWindow):
         
         item = selected_items[0]
         task_id = item.data(0, Qt.UserRole)
-        
         drag = QDrag(self.task_tree)
         mime_data = QMimeData()
         mime_data.setText(str(task_id))
         drag.setMimeData(mime_data)
         
         drag.exec_(Qt.CopyAction)
+
+    def tree_drag_move(self, event):
+        event.accept()
+
+    def tree_drag_enter(self, event):
+        event.accept()
     
     def schedule_drag_enter(self, event):
         event.accept()
@@ -1000,7 +1186,7 @@ class MainWindow(QMainWindow):
             mime_data = event.mimeData()
             if mime_data.hasText():
                 try:
-                    task_id = int(mime_data.text())
+                    task_id = str(mime_data.text())
                     if task_id in self.task_manager.tasks:
                         date = self.current_week_start.addDays(col)
                         self.task_manager.schedule_task(task_id, date.toString("yyyy-MM-dd"), str(row))
