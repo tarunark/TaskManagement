@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QDateEdit, QCheckBox, QMessageBox, QHeaderView, QMenu,
                              QAction, QDialogButtonBox, QFormLayout, QGroupBox)
 from PyQt5.QtCore import Qt, QDate, QMimeData, QTimer, QTime
-from PyQt5.QtGui import QColor, QDrag, QFont, QPainter, QPen
+from PyQt5.QtGui import QColor, QDrag, QFont, QPainter, QPen, QKeyEvent
 
 def writeToFile(id, txt):
     with open(Settings.NotesFolder + '\\' + str(id) + '.txt', 'w') as f:
@@ -196,7 +196,53 @@ class TaskManager:
         return results
 
 
+class CustomTreeWidget(QTreeWidget):
+    """Custom tree widget with keyboard event handling"""
 
+    def keyPressEvent(self, event):
+        """Handle keyboard events"""
+        key = event.key()
+        modifiers = event.modifiers()
+
+        print(key)
+        
+        # Delete key - remove selected item
+        if key == 43:
+            #self.parent().parent().remove_task()
+            self.main_window.create_new_task()
+            return
+        
+        if key == 16777222:
+            self.main_window.create_new_subtask()
+            return
+        '''    
+        # Enter/Return key - add subtask
+        elif key in (Qt.Key_Return, Qt.Key_Enter):
+            self.parent().parent().add_subtask()
+            return
+            
+        # Ctrl+N - add new top-level task
+        elif key == Qt.Key_N and modifiers == Qt.ControlModifier:
+            self.parent().parent().add_task()
+            return
+            
+        # Ctrl+E - edit selected task
+        elif key == Qt.Key_E and modifiers == Qt.ControlModifier:
+            selected = self.selectedItems()
+            if selected:
+                self.editItem(selected[0], 0)
+            return
+            
+        # Space - toggle expansion
+        elif key == Qt.Key_Space:
+            selected = self.selectedItems()
+            if selected:
+                item = selected[0]
+                item.setExpanded(not item.isExpanded())
+            return
+        '''
+        # Call parent implementation for other keys (arrow keys, etc.)
+        super().keyPressEvent(event)
 
 class Settings:
     NotesFolder = r'E:\Workshop\NotesFolder'
@@ -484,10 +530,6 @@ class MainWindow(QMainWindow):
         new_child_btn.clicked.connect(self.create_new_subtask)
         btn_layout.addWidget(new_child_btn)
         
-        quick_add_btn = QPushButton("Quick Add (Enter)")
-        quick_add_btn.clicked.connect(self.start_quick_add)
-        btn_layout.addWidget(quick_add_btn)
-        
         layout.addLayout(btn_layout)
 
                 # Search field
@@ -497,7 +539,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.search_field)
         
         # Task tree - use custom editable tree widget
-        self.task_tree = QTreeWidget()#EditableTreeWidget()
+        self.task_tree = CustomTreeWidget()#QTreeWidget()#EditableTreeWidget()
         self.task_tree.main_window = self
         self.task_tree.setHeaderLabels(["Title", "Priority", "Tags"])
         self.task_tree.setColumnWidth(0, 200)
@@ -509,6 +551,9 @@ class MainWindow(QMainWindow):
         self.task_tree.setAcceptDrops(True)
         self.task_tree.dragEnterEvent = self.tree_drag_enter
         self.task_tree.dragMoveEvent = self.tree_drag_move
+        #self.task_tree.keyPressEvent.connect(self.keyPressEvent)
+
+
 
         self.task_tree.setSelectionMode(QTreeWidget.SingleSelection)
         self.task_tree.setDropIndicatorShown(True)
@@ -519,7 +564,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.task_tree)
         
         return panel
-    
+
     def filter_tasks(self, search_text):
         """Filter tree items based on search text"""
         search_text = search_text.lower()
@@ -741,24 +786,6 @@ class MainWindow(QMainWindow):
         self.update_week_label()
         self.load_schedule()
     
-    def start_quick_add(self):
-        """Start the quick add mode by creating a pending item"""
-        if self.task_tree.pending_new_item:
-            # Already in quick add mode
-            return
-        
-        # Create a new pending item at the root level
-        new_item = QTreeWidgetItem()
-        new_item.setText(0, "")
-        new_item.setData(0, Qt.UserRole, -1)
-        new_item.setFlags(new_item.flags() | Qt.ItemIsEditable)
-        new_item.setForeground(0, QColor(150, 150, 150))
-        
-        self.task_tree.addTopLevelItem(new_item)
-        self.task_tree.pending_new_item = new_item
-        self.task_tree.setCurrentItem(new_item)
-        self.task_tree.editItem(new_item, 0)
-    
     def load_tasks(self):
         self.task_tree.clear()
         root_tasks = self.task_manager.get_root_tasks()
@@ -772,7 +799,7 @@ class MainWindow(QMainWindow):
         item.setText(1, task.priority)
         item.setText(2, ", ".join(task.tags))
         item.setData(0, Qt.UserRole, task.id)
-        item.setFlags(item.flags() | Qt.ItemIsEditable)
+        #item.setFlags(item.flags() | Qt.ItemIsEditable)
         
         # Style based on state
         if task.state == "completed":
@@ -920,9 +947,17 @@ class MainWindow(QMainWindow):
     def create_new_task(self):
         dialog = TaskDialog(self)
         if dialog.exec_():
-            values = dialog.get_values()
-            self.task_manager.create_task(**values)
-            self.load_tasks()
+            if not self.current_task or self.current_task.parent_id == None:
+                values = dialog.get_values()
+                self.task_manager.create_task(**values)
+                self.load_tasks()
+            else:
+                values = dialog.get_values()
+                values['parent_id'] = self.current_task.parent_id
+                self.task_manager.create_task(**values)
+                self.load_tasks()
+
+
     
     def create_new_subtask(self):
         if not self.current_task:
