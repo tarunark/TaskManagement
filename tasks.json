@@ -78,21 +78,6 @@
       "summary": []
     },
     {
-      "id": 6,
-      "title": "aaaaa",
-      "parent_id": null,
-      "description": "",
-      "priority": "Medium",
-      "tags": [],
-      "created_date": "2026-01-11T21:03:31.379974",
-      "completed_date": null,
-      "state": "active",
-      "notes": ". Aaa has a note\n. Nxt week\n\n. test\n    . <b>firtess<\\b>\n\n\n\n\n_________________________________\n\n\n_________________________________\n\n\n\n_________________________________\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
-      "dirty": false,
-      "futureSlotCount": 0,
-      "summary": []
-    },
-    {
       "id": 7,
       "title": "aaa",
       "parent_id": null,
@@ -162,7 +147,7 @@
       "priority": "Medium",
       "tags": [],
       "created_date": "2026-01-12T14:16:12.879775",
-      "completed_date": "2026-01-14T19:09:10.810218",
+      "completed_date": "2026-01-14T21:01:31.105510",
       "state": "completed",
       "notes": "asss\n\nfree\nsss\n\nsddsds  ",
       "dirty": false,
@@ -207,8 +192,8 @@
       "priority": "Medium",
       "tags": [],
       "created_date": "2026-01-14T19:49:11.564863",
-      "completed_date": null,
-      "state": "active",
+      "completed_date": "2026-01-14T21:01:36.525987",
+      "state": "completed",
       "notes": "",
       "dirty": false,
       "futureSlotCount": 0,
@@ -297,21 +282,6 @@
       "priority": "Medium",
       "tags": [],
       "created_date": "2026-01-14T19:49:24.195884",
-      "completed_date": null,
-      "state": "active",
-      "notes": "",
-      "dirty": false,
-      "futureSlotCount": 0,
-      "summary": []
-    },
-    {
-      "id": "260114_194926",
-      "title": "qkjhkjhskjhs",
-      "parent_id": null,
-      "description": "",
-      "priority": "Medium",
-      "tags": [],
-      "created_date": "2026-01-14T19:49:26.107871",
       "completed_date": null,
       "state": "active",
       "notes": "",
@@ -529,31 +499,25 @@
       "3": 10
     },
     "2026-01-12": {
-      "4": "260112_141612"
+      "3": "260112_141612"
     },
     "2026-01-13": {
       "1": "260112_141612",
-      "3": 6,
-      "5": "260114_194926",
-      "4": "260114_194915"
+      "3": "260112_141612"
     },
     "2026-01-16": {
-      "3": "260112_141612",
-      "4": "260114_194920",
+      "3": "260114_124855",
+      "5": "260114_194920",
       "1": "260112_141612"
     },
     "2026-01-14": {
-      "3": "260114_194922",
-      "5": 6,
-      "1": 6,
-      "4": "260112_141612"
+      "1": "260114_202214",
+      "3": "260112_141612"
     },
     "2026-01-17": {},
     "2026-01-15": {
-      "1": "260112_141612",
-      "5": "260114_194922",
-      "4": "260112_141612",
-      "3": "260114_124855"
+      "3": "260114_194922",
+      "1": "260112_141612"
     }
   },
   "next_id": 39

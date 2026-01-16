@@ -246,11 +246,12 @@ class CustomTreeWidget(QTreeWidget):
 
 class Settings:
     NotesFolder = r'E:\Workshop\NotesFolder'
-    meetingColor = QColor(150, 222, 209)
-    workColor = QColor(135, 206, 235)
-    breakColor = QColor(115, 147, 179)
-    snoozeColor = QColor(204, 204, 255)
-    assignedColorBg = QColor(135, 206, 235)
+    meetingColor = QColor(79, 179, 109)
+    workColor = QColor(72, 138, 189)
+    #breakColor = QColor(115, 147, 179)
+    breakColor = QColor(83, 97, 122)
+    snoozeColor = QColor(104, 104, 155)
+    assignedColorBg = QColor(31, 121, 191)
     assignedColorFgCritical = QColor(220, 20, 20)
     assignedColorFgHigh = QColor(200, 20, 20)
     assignedColorFgMedium = QColor(0, 0, 0)
@@ -641,6 +642,7 @@ class MainWindow(QMainWindow):
         self.schedule_table.dragEnterEvent = self.schedule_drag_enter
         self.schedule_table.dragMoveEvent = self.schedule_drag_move
         self.schedule_table.dropEvent = self.schedule_drop
+        self.schedule_table.setEditTriggers(QTableWidget.NoEditTriggers)
         layout.addWidget(self.schedule_table)
         
         return panel
