@@ -132,7 +132,12 @@ class TaskManager:
                     setattr(task, key, value)
             if(save):
                 self.save_data()
-    
+    def move_tasks(self, task_id, oldParent, newParent):
+        
+        self.tasks[task_id].parent_id = newParent
+        self.save_data()
+        pass
+
     def delete_task(self, task_id):
         if task_id in self.tasks:
             # Remove children summary
@@ -204,7 +209,7 @@ class CustomTreeWidget(QTreeWidget):
         key = event.key()
         modifiers = event.modifiers()
 
-        print(key)
+        #print(key)
         
         # Delete key - remove selected item
         if key == 43:
@@ -212,7 +217,7 @@ class CustomTreeWidget(QTreeWidget):
             self.main_window.create_new_task()
             return
         
-        if key == 16777222:
+        if key == 47:
             self.main_window.create_new_subtask()
             return
         '''    
@@ -243,6 +248,32 @@ class CustomTreeWidget(QTreeWidget):
         '''
         # Call parent implementation for other keys (arrow keys, etc.)
         super().keyPressEvent(event)
+
+    def dropEvent(self, e):
+        selected_items = self.selectedItems()
+        item = selected_items[0]
+        oldParent = item.parent()
+
+        super().dropEvent(e)
+
+        newParent = item.parent()
+
+        def getTaskId(item):
+            if(item):
+                return item.data(0, Qt.UserRole)
+            else:
+                return None
+            
+        #def printId(txt, item):
+        #    print(txt + str(getTaskId(item)))
+            
+        #printId('item: ', item)
+        #printId('oldParent: ', oldParent)
+        #printId('newParent: ', newParent)
+
+        self.main_window.move_tasks(getTaskId(item), getTaskId(oldParent), getTaskId(newParent))
+        
+        pass
 
 class Settings:
     NotesFolder = r'E:\Workshop\NotesFolder'
@@ -552,16 +583,14 @@ class MainWindow(QMainWindow):
         self.task_tree.setAcceptDrops(True)
         self.task_tree.dragEnterEvent = self.tree_drag_enter
         self.task_tree.dragMoveEvent = self.tree_drag_move
+
         #self.task_tree.keyPressEvent.connect(self.keyPressEvent)
-
-
-
         self.task_tree.setSelectionMode(QTreeWidget.SingleSelection)
         self.task_tree.setDropIndicatorShown(True)
         self.task_tree.setDragDropMode(QTreeWidget.InternalMove)
         self.task_tree.setDefaultDropAction(Qt.MoveAction)
         self.task_tree.startDrag = lambda actions: self.start_tree_drag(actions)
-        #self.task_tree.dropItem = lambda actions: self.drapDropItem(actions)
+        #self.task_tree.dropItem = lambda actions: self.dragDropItem(actions)
         layout.addWidget(self.task_tree)
         
         return panel
@@ -959,8 +988,11 @@ class MainWindow(QMainWindow):
                 self.task_manager.create_task(**values)
                 self.load_tasks()
 
+    def move_tasks(self, task_id, oldParent, newParent):
+        self.task_manager.move_tasks(task_id, oldParent, newParent)
+        self.load_tasks()
+        pass
 
-    
     def create_new_subtask(self):
         if not self.current_task:
             QMessageBox.warning(self, "Warning", "Please select a parent task first")
@@ -1072,7 +1104,30 @@ class MainWindow(QMainWindow):
         
         drag.exec_(Qt.CopyAction)
 
+    def dragDropItem(self, supported_actions):
+        """Custom drag handler to prevent item removal from tree"""
+        '''
+        selected_items = self.task_tree.selectedItems()
+        
+        if not selected_items:
+            return
+        
+        item = selected_items[0]
+        task_id = item.data(0, Qt.UserRole)
+        drag = QDrag(self.task_tree)
+        mime_data = QMimeData()
+        mime_data.setText(str(task_id))
+        drag.setMimeData(mime_data)
+        
+        drag.exec_(Qt.CopyAction)
+        '''
+        
+        print('dragDropItem called' )
+        pass
+
+
     def tree_drag_move(self, event):
+        
         event.accept()
 
     def tree_drag_enter(self, event):
