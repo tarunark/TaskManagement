@@ -761,8 +761,11 @@ class MainWindow(QMainWindow):
         print('launch notepad ++')
         pass
 
+    def getNotesFileName(self): 
+        return self.current_task.title + '_' + self.current_task.id
+     
     def restoreNotes(self ):
-        txt = readFromFile(self.current_task.id)
+        txt = readFromFile(self.getNotesFileName())
         self.notes_edit.setPlainText(txt)
         #self.task_manager.update_task(self.current_task.id, save= False, notes='')
         self.current_task.dirty = False
@@ -772,7 +775,7 @@ class MainWindow(QMainWindow):
     def commitNotes(self):
         print('commit')
         txt = self.notes_edit.toPlainText()
-        writeToFile(self.current_task.id, txt)
+        writeToFile(self.getNotesFileName(), txt)
         #self.task_manager.update_task(self.current_task.id, save= False, notes='')
         self.current_task.dirty = False
         self.notes_label.setText("Notes:")
