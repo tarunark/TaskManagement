@@ -91,6 +91,10 @@
       "summary": []
     }
   ],
-  "schedule": {},
+  "schedule": {
+    "2026-01-14": {
+      "3": null
+    }
+  },
   "next_id": 7
 }

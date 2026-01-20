@@ -3,6 +3,8 @@ import sys
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
+from plyer import notification
+
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QTreeWidget, QTreeWidgetItem, QTableWidget,
                              QTableWidgetItem, QTextEdit, QLabel, QPushButton, 
@@ -25,6 +27,13 @@ def readFromFile(id):
             txt =f.read()
     
     return txt
+
+def notify(title, mesg, timeout = 10):
+    notification.notify(title=title, message=mesg, timeout=timeout)
+
+    notification.notify()
+    pass
+
 
 class Task:
     def __init__(self, id, title, parent_id=None, description="", priority="Medium",
@@ -300,7 +309,7 @@ class Settings:
         ]
     
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    lslots = ['9:00', '10:00', '12:00', '12:30', '14:30',  '16:00', '18:00', '19:00', '23:00']
+    lslots = ['9:00', '10:00', '12:00', '12:30', '14:30',  '16:00', '17:00', '19:00', '23:00']
 
 
 
@@ -448,11 +457,15 @@ class TimeIndicatorTableWidget(QTableWidget):
                 # Calculate position within this slot
                 total_minutes = start_time.secsTo(end_time) / 60.0
                 elapsed_minutes = start_time.secsTo(current_time) / 60.0
+
+                if(int(elapsed_minutes) ==0):
+                    notify('TaskSlots', 'Begin next slot')
                 
                 progress = elapsed_minutes / total_minutes if total_minutes > 0 else 0
                 row_height = self.rowHeight(row)
                 
                 y_in_row = int(row_height * progress)
+
                 
                 return cumulative_y + y_in_row
             
