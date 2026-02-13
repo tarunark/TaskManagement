@@ -8,8 +8,8 @@
       "priority": "Medium",
       "tags": [],
       "created_date": "2026-01-16T15:22:08.074967",
-      "completed_date": null,
-      "state": "active",
+      "completed_date": "2026-02-13T20:32:36.353549",
+      "state": "completed",
       "notes": "",
       "dirty": false,
       "futureSlotCount": 0,
@@ -20,7 +20,7 @@
       "title": "T2",
       "parent_id": "260116_152240",
       "description": "",
-      "priority": "Medium",
+      "priority": "Critical",
       "tags": [],
       "created_date": "2026-01-16T15:22:12.705252",
       "completed_date": null,
@@ -48,9 +48,9 @@
     {
       "id": "260116_152224",
       "title": "A1.1",
-      "parent_id": "260116_152208",
+      "parent_id": "test_001",
       "description": "",
-      "priority": "Medium",
+      "priority": "High",
       "tags": [],
       "created_date": "2026-01-16T15:22:24.170046",
       "completed_date": null,
@@ -63,9 +63,9 @@
     {
       "id": "260116_152231",
       "title": "A2.1",
-      "parent_id": "260116_152208",
+      "parent_id": "test_001",
       "description": "",
-      "priority": "Medium",
+      "priority": "High",
       "tags": [],
       "created_date": "2026-01-16T15:22:31.185393",
       "completed_date": null,
@@ -89,12 +89,98 @@
       "dirty": false,
       "futureSlotCount": 0,
       "summary": []
+    },
+    {
+      "id": "test_001",
+      "title": "Critical Task Example",
+      "parent_id": null,
+      "description": "This is a critical priority task",
+      "priority": "Critical",
+      "tags": [
+        "urgent",
+        "important"
+      ],
+      "created_date": "2026-01-16T16:00:00.000000",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "test_002",
+      "title": "High Priority Task",
+      "parent_id": null,
+      "description": "This is a high priority task",
+      "priority": "High",
+      "tags": [
+        "important"
+      ],
+      "created_date": "2026-01-16T16:01:00.000000",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "test_003",
+      "title": "Low Priority Task",
+      "parent_id": null,
+      "description": "This is a low priority task",
+      "priority": "Low",
+      "tags": [],
+      "created_date": "2026-01-16T16:02:00.000000",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "test_004",
+      "title": "Subtask of Critical",
+      "parent_id": "test_001",
+      "description": "This is a subtask with medium priority",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-01-16T16:03:00.000000",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
+    },
+    {
+      "id": "test_005",
+      "title": "Another Subtask",
+      "parent_id": "test_001",
+      "description": "This is a subtask with low priority",
+      "priority": "Low",
+      "tags": [],
+      "created_date": "2026-01-16T16:04:00.000000",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
     }
   ],
   "schedule": {
     "2026-01-14": {
       "3": null
+    },
+    "2026-02-10": {
+      "3": "test_001"
+    },
+    "2026-02-13": {
+      "4": "test_003"
     }
   },
-  "next_id": 7
+  "next_id": 12
 }

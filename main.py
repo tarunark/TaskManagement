@@ -14,19 +14,46 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt5.QtCore import Qt, QDate, QMimeData, QTimer, QTime
 from PyQt5.QtGui import QColor, QDrag, QFont, QPainter, QPen, QKeyEvent
 
+
+# Utility functions
+
+# Function to write text to a file
+# Parameters:
+# - id: the identifier of the file
+# - txt: the text to be written to the file
+# Returns: None
 def writeToFile(id, txt):
+    """
+    Write text to a file.
+    Args:
+        id (int): The identifier of the file.
+        txt (str): The text to be written to the file.
+    Returns:
+        None
+    """
     with open(Settings.NotesFolder + '\\' + str(id) + '.txt', 'w') as f:
         f.write(txt)
     pass
 
+# Function to read text from a file
+# Parameters:
+# - id: the identifier of the file
+# Returns: the text read from the file
 def readFromFile(id):
+    """
+    Read text from a file.
+    Args:
+        id (int): The identifier of the file.
+    Returns:
+        str: The text read from the file.
+    """
     txt = ''
     file_path = Settings.NotesFolder + '\\' + str(id) + '.txt'
     if os.path.exists(file_path):
         with open(file_path, 'r') as f:
-            txt =f.read()
-    
+            txt = f.read()
     return txt
+
 
 def notify(title, mesg, timeout = 10):
     notification.notify(title=title, message=mesg, timeout=timeout)
@@ -52,6 +79,8 @@ class Task:
         self.dirty = False
         self.futureSlotCount = 0
         self.summary = summary or []
+    
+
     
     def to_dict(self):
         return {
@@ -83,6 +112,12 @@ class TaskManager:
         self.tasks = {}
         self.schedule = {}  # {date: {slot: task_id}}
         self.next_id = 1
+        self.priority_order = {
+            'Critical': 4,
+            'High': 3,
+            'Medium': 2,
+            'Low': 1
+        }
         self.load_data()
     
     def load_data(self):
@@ -163,10 +198,16 @@ class TaskManager:
             self.save_data()
     
     def get_children(self, parent_id):
-        return [t for t in self.tasks.values() if t.parent_id == parent_id]
+        children = [t for t in self.tasks.values() if t.parent_id == parent_id]
+        # Sort by priority (highest first)
+        children.sort(key=lambda task: self.priority_order.get(task.priority, 2), reverse=True)
+        return children
     
     def get_root_tasks(self):
-        return [t for t in self.tasks.values() if t.parent_id is None]
+        root_tasks = [t for t in self.tasks.values() if t.parent_id is None]
+        # Sort by priority (highest first)
+        root_tasks.sort(key=lambda task: self.priority_order.get(task.priority, 2), reverse=True)
+        return root_tasks
     
     def schedule_task(self, task_id, date, slot):
         date_str = date if isinstance(date, str) else date.toString("yyyy-MM-dd")
@@ -229,32 +270,22 @@ class CustomTreeWidget(QTreeWidget):
         if key == 47:
             self.main_window.create_new_subtask()
             return
-        '''    
-        # Enter/Return key - add subtask
-        elif key in (Qt.Key_Return, Qt.Key_Enter):
-            self.parent().parent().add_subtask()
-            return
-            
-        # Ctrl+N - add new top-level task
-        elif key == Qt.Key_N and modifiers == Qt.ControlModifier:
-            self.parent().parent().add_task()
-            return
-            
-        # Ctrl+E - edit selected task
-        elif key == Qt.Key_E and modifiers == Qt.ControlModifier:
-            selected = self.selectedItems()
-            if selected:
-                self.editItem(selected[0], 0)
-            return
-            
-        # Space - toggle expansion
-        elif key == Qt.Key_Space:
-            selected = self.selectedItems()
-            if selected:
-                item = selected[0]
-                item.setExpanded(not item.isExpanded())
-            return
-        '''
+        
+        # Priority shortcuts with Ctrl+1-4
+        if modifiers == Qt.ControlModifier:
+            if key == Qt.Key_1:
+                self.main_window.change_task_priority("Low")
+                return
+            elif key == Qt.Key_2:
+                self.main_window.change_task_priority("Medium")
+                return
+            elif key == Qt.Key_3:
+                self.main_window.change_task_priority("High")
+                return
+            elif key == Qt.Key_4:
+                self.main_window.change_task_priority("Critical")
+                return
+        
         # Call parent implementation for other keys (arrow keys, etc.)
         super().keyPressEvent(event)
 
@@ -846,7 +877,6 @@ class MainWindow(QMainWindow):
         item.setText(1, task.priority)
         item.setText(2, ", ".join(task.tags))
         item.setData(0, Qt.UserRole, task.id)
-        #item.setFlags(item.flags() | Qt.ItemIsEditable)
         
         # Style based on state
         if task.state == "completed":
@@ -858,6 +888,23 @@ class MainWindow(QMainWindow):
         elif task.state == "archived":
             for i in range(3):
                 item.setForeground(i, QColor(200, 200, 200))
+        
+        # Add priority-based color coding for active tasks
+        if task.state == "active":
+            if task.priority == "Critical":
+                item.setForeground(0, Settings.assignedColorFgCritical)
+                font = item.font(0)
+                font.setBold(True)
+                item.setFont(0, font)
+            elif task.priority == "High":
+                item.setForeground(0, Settings.assignedColorFgHigh)
+                font = item.font(0)
+                font.setBold(True)
+                item.setFont(0, font)
+            elif task.priority == "Medium":
+                item.setForeground(0, Settings.assignedColorFgMedium)
+            else:  # Low
+                item.setForeground(0, Settings.assignedColorFgLow)
         
         if parent_item:
             parent_item.addChild(item)
@@ -1055,6 +1102,22 @@ class MainWindow(QMainWindow):
             self.notes_edit.clear()
             self.refs_edit.clear()
     
+    def change_task_priority(self, priority):
+        if not self.current_task:
+            return
+        
+        old_priority = self.current_task.priority
+        self.task_manager.update_task(self.current_task.id, priority=priority)
+        self.load_tasks()
+        self.display_task_details()
+        
+        # Find and re-select the task in the tree
+        items = self.task_tree.findItems(self.current_task.title, Qt.MatchRecursive)
+        for item in items:
+            if item.data(0, Qt.UserRole) == self.current_task.id:
+                self.task_tree.setCurrentItem(item)
+                break
+    
     def show_task_context_menu(self, position):
         menu = QMenu()
         
@@ -1062,6 +1125,15 @@ class MainWindow(QMainWindow):
         if item:
             edit_action = menu.addAction("Edit")
             complete_action = menu.addAction("Mark Done")
+            menu.addSeparator()
+            
+            # Add priority submenu
+            priority_menu = menu.addMenu("Change Priority")
+            low_action = priority_menu.addAction("Low")
+            medium_action = priority_menu.addAction("Medium")
+            high_action = priority_menu.addAction("High")
+            critical_action = priority_menu.addAction("Critical")
+            
             menu.addSeparator()
             delete_action = menu.addAction("Delete")
             
@@ -1071,6 +1143,14 @@ class MainWindow(QMainWindow):
                 self.edit_current_task()
             elif action == complete_action:
                 self.mark_task_complete()
+            elif action == low_action:
+                self.change_task_priority("Low")
+            elif action == medium_action:
+                self.change_task_priority("Medium")
+            elif action == high_action:
+                self.change_task_priority("High")
+            elif action == critical_action:
+                self.change_task_priority("Critical")
             elif action == delete_action:
                 self.delete_current_task()
     
