@@ -159,6 +159,7 @@ class TaskManager:
     
     def create_task(self, title, parent_id=None, **kwargs):
         #import datetime
+        title = title.strip().replace(' ', '_')
         now=datetime.now()
         newId=now.strftime('%y%m%d_%H%M%S')
         
@@ -741,17 +742,19 @@ class MainWindow(QMainWindow):
         # Notes
         self.notes_label = QLabel("Notes:")
         layout.addWidget(self.notes_label)
-        self.notes_edit = QTextEdit()
+        self.notes_edit = CustomTextEdit()#QTextEdit()
         self.notes_edit.textChanged.connect(self.on_notes_changed)
+        #self.notes_edit.contextMenuEvent()
+
         layout.addWidget(self.notes_edit)
 
         btn_layout = QHBoxLayout()
-        new_btn = QPushButton("restore")
-        new_btn.clicked.connect(self.restoreNotes)
+        new_btn = QPushButton("reload")
+        new_btn.clicked.connect(self.reloadNotes)
         btn_layout.addWidget(new_btn)
         
         new_btn = QPushButton("save")
-        new_btn.clicked.connect(self.commitNotes)
+        new_btn.clicked.connect(self.saveNotes)
         btn_layout.addWidget(new_btn)
 
         new_btn = QPushButton("extern")
@@ -789,13 +792,20 @@ class MainWindow(QMainWindow):
         return panel
     
     def externEdit(self):
-        print('launch notepad ++')
+        #print('launch notepad ++', Settings.NotesFolder + '\\' + str(self.getNotesFileName()) + '.txt')
+
+        osCommandString = r'"C:\Progra~1\Notepad++\notepad++.exe" ' + str(Settings.NotesFolder) + '\\' + str(self.getNotesFileName()) + '.txt'
+        print(osCommandString)
+
+        os.startfile(str(Settings.NotesFolder) + '\\' + str(self.getNotesFileName()) + '.txt')
+        #os.system(osCommandString)
+        
         pass
 
     def getNotesFileName(self): 
         return self.current_task.title + '_' + self.current_task.id
      
-    def restoreNotes(self ):
+    def reloadNotes(self ):
         txt = readFromFile(self.getNotesFileName())
         self.notes_edit.setPlainText(txt)
         #self.task_manager.update_task(self.current_task.id, save= False, notes='')
@@ -803,8 +813,7 @@ class MainWindow(QMainWindow):
         self.notes_label.setText("Notes:")
         pass
 
-    def commitNotes(self):
-        print('commit')
+    def saveNotes(self):
         txt = self.notes_edit.toPlainText()
         writeToFile(self.getNotesFileName(), txt)
         #self.task_manager.update_task(self.current_task.id, save= False, notes='')
@@ -1014,6 +1023,8 @@ class MainWindow(QMainWindow):
         self.task_info_label.setText(info)
 
         self.notes_edit.blockSignals(True)
+
+
         self.notes_edit.setPlainText(self.current_task.notes)
         self.notes_edit.blockSignals(False)
         
@@ -1025,6 +1036,11 @@ class MainWindow(QMainWindow):
             self.notes_label.setText("Notes*:")
         else:
             self.notes_label.setText("Notes:")
+
+        if(len(self.current_task.notes)==0):
+            self.reloadNotes()
+
+        pass
     
     def on_notes_changed(self):
         if self.current_task:
@@ -1321,6 +1337,28 @@ class MainWindow(QMainWindow):
     def update_time_indicator(self):
         """Force repaint of the schedule table to update time indicator"""
         self.schedule_table.viewport().update()
+
+
+class CustomTextEdit(QTextEdit):
+
+    def contextMenuEvent(self, event):
+        print('context menu event')
+        menu = self.createStandardContextMenu()
+        myMenuAction = menu.addAction(("Launch"))
+        
+        action = menu.exec(event.globalPos())
+        
+        if action == myMenuAction:
+
+            text = self.textCursor().selectedText().strip()
+            try:
+                os.startfile(text)
+            except Exception as e:
+                print(e)
+        
+
+        del menu;
+    pass
 
 
 def main():

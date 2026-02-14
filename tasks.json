@@ -25,10 +25,12 @@
       "created_date": "2026-01-16T15:22:12.705252",
       "completed_date": null,
       "state": "active",
-      "notes": "",
+      "notes": "https://www.bbc.co.uk/sounds/play/live/bbc_radio_one\n\n",
       "dirty": false,
       "futureSlotCount": 0,
-      "summary": []
+      "summary": [
+        "In progress"
+      ]
     },
     {
       "id": "260116_152217",
@@ -169,6 +171,21 @@
       "dirty": false,
       "futureSlotCount": 0,
       "summary": []
+    },
+    {
+      "id": "260214_192153",
+      "title": "a_good_day",
+      "parent_id": null,
+      "description": "",
+      "priority": "Medium",
+      "tags": [],
+      "created_date": "2026-02-14T19:21:53.196281",
+      "completed_date": null,
+      "state": "active",
+      "notes": "",
+      "dirty": false,
+      "futureSlotCount": 0,
+      "summary": []
     }
   ],
   "schedule": {
@@ -179,8 +196,14 @@
       "3": "test_001"
     },
     "2026-02-13": {
-      "4": "test_003"
+      "3": "test_003",
+      "6": "test_005",
+      "1": "260116_152231"
+    },
+    "2026-02-12": {
+      "6": "260116_152212",
+      "3": "260214_192153"
     }
   },
-  "next_id": 12
+  "next_id": 13
 }
