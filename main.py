@@ -583,6 +583,10 @@ class MainWindow(QMainWindow):
         notes_action.triggered.connect(self.show_notes_shortlist)
         search_menu.addAction(notes_action)
     
+        purge_action = QAction("Purge Completed Tasks", self)
+        purge_action.triggered.connect(self.purge_completed_tasks)
+        search_menu.addAction(purge_action)
+
     def create_task_tree_panel(self):
         panel = QWidget()
         layout = QVBoxLayout(panel)
@@ -1333,7 +1337,29 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Notes Shortlist", msg)
         else:
             QMessageBox.information(self, "Notes Shortlist", "No tasks with notes found in the last 7 days")
-    
+
+    def purge_completed_tasks(self):
+        '''
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=7)
+        
+        results = self.task_manager.get_tasks_with_notes_in_range(start_date, end_date)
+        
+        if results:
+            msg = "Tasks with Notes (Last 7 Days):\n\n"
+            for task in results:
+                msg += f"═══════════════════════════\n"
+                msg += f"Task: {task.title}\n"
+                msg += f"Notes: {task.notes[:200]}"
+                if len(task.notes) > 200:
+                    msg += "..."
+                msg += "\n\n"
+            QMessageBox.information(self, "Notes Shortlist", msg)
+        else:
+            QMessageBox.information(self, "Notes Shortlist", "No tasks with notes found in the last 7 days")
+            '''
+        print('purge completed tasks')
+
     def update_time_indicator(self):
         """Force repaint of the schedule table to update time indicator"""
         self.schedule_table.viewport().update()
